@@ -25,4 +25,10 @@ describe('AppController', () => {
       expect(appController.getData()).toBe('its a string');
     });
   });
+
+  describe('getTestById', () => {
+    it('should return "Test ID: 1" for ID 1', () => {
+      expect(appController.getTestById('1')).toBe('Test ID: 1');
+    });
+  });
 });
