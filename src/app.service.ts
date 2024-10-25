@@ -5,7 +5,7 @@ export class AppService {
   private tests = [{ id: 1, name: 'Test 1' }];
 
   getHello(): string {
-    const data = 'Hi, Anima here..';
+    // const data = 'Hi, Anima here..';
     return 'Hello World!';
   }
 
