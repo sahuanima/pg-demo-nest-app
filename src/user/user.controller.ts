@@ -1,44 +1,56 @@
 import {
   Controller,
   Post,
-  Body,
   Get,
-  Request,
+  Body,
+  Param,
   UseGuards,
-  // InternalServerErrorException,
-  // Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './user.dto';
+import { LoginUserDto } from './user-login.dto';
 import { User } from './user.entity';
-import { AuthService } from 'src/auth/auth.service';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/auth.guard'; // Protect routes that need admin access
+import { AuthGuard } from '@nestjs/passport';
 
-@Controller('user')
+@Controller('api/v1/user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
-  @Post('register')
-  async userRegister(@Body() createUserDto: CreateUserDto): Promise<any> {
+  @Post('registration')
+  async register(@Body() createUserDto: CreateUserDto) {
     return this.userService.userRegistration(createUserDto);
   }
 
   @Post('login')
-  async userLogin(
-    @Body() createUserDto: CreateUserDto,
-  ): Promise<{ access_token: string }> {
-    return this.authService.userLogin(
-      createUserDto.email,
-      createUserDto.password,
-    );
+  async login(@Body() loginUserDto: LoginUserDto) {
+    const user = await this.userService.validateUser(loginUserDto);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return { message: 'Login successful', user };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('profile')
-  getProfile(@Request() req): Promise<User> {
-    return req.user;
+  @UseGuards(AuthGuard('jwt'), AdminGuard) // Protect this route with AdminGuard
+  @Get('all')
+  async getAllUsers(): Promise<User[]> {
+    return this.userService.getAllUsers();
+  }
+
+  @Get(':id')
+  async getUser(@Param('id') id: string): Promise<User> {
+    const userId = Number(id); // Convert string to number
+    if (isNaN(userId)) {
+      throw new UnauthorizedException('Invalid user ID');
+    }
+    return this.userService.getUserById(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard) // Protect this route with AdminGuard
+  @Post('create')
+  async createAdmin(@Body() createUserDto: CreateUserDto): Promise<any> {
+    createUserDto.role = 'ADMIN'; // Set the role to ADMIN
+    return this.userService.userRegistration(createUserDto);
   }
 }
