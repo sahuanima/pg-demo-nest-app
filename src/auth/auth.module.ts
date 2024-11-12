@@ -5,9 +5,6 @@ import { UserModule } from 'src/user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 // import { UserService } from 'src/user/user.service';
 import { JwtStrategy } from './jwt.strategy';
-// import { JwtStrategy } from './jwt.strategy';
-
-// import { UserService } from 'src/user/user.service';
 
 @Module({
   imports: [

@@ -18,16 +18,12 @@ export class AuthService {
     const user = await this.userService.validateUser(loginUserDto); // Pass the entire DTO
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials'); // Using UnauthorizedException for better error handling
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     //Generate JWT token
-    const payload = { email: user.email, role: user.role, id: user.id };
+    const payload = { email: user.email, role: user.role, userId: user.id };
     const access_token = this.jwtService.sign(payload);
     return { access_token };
   }
-  // catch(error) {
-  //   console.error('Error during login in AuthService:', error.message || error);
-  //   throw new UnauthorizedException('Login failed');
-  // }
 }

@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Request,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
@@ -38,13 +39,37 @@ export class UserController {
     return this.userService.getAllUsers();
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get(':id')
-  async getUser(@Param('id') id: string): Promise<User> {
-    const userId = Number(id); // Convert string to number
-    if (isNaN(userId)) {
-      throw new UnauthorizedException('Invalid user ID');
+  async getUser(@Param('id') id: string, @Request() req): Promise<User> {
+    // Log the received data for debugging
+    console.log('Requested ID:', id);
+    console.log('User from JWT:', req.user);
+
+    // Ensure req.user exists and contains an id
+    if (!req.user || typeof req.user.id === 'undefined') {
+      throw new UnauthorizedException(
+        'User information is missing from request.',
+      );
     }
-    return this.userService.getUserById(userId);
+
+    // Get the logged-in user's ID from req.user
+    const loggedInUserId = req.user.id;
+
+    // Check if the logged-in user is accessing their own data
+    if (id === String(loggedInUserId)) {
+      // Allow access if the user is trying to access their own data
+      const user = await this.userService.getUserById(loggedInUserId);
+      if (!user) {
+        throw new UnauthorizedException('User not found.');
+      }
+      return user;
+    } else {
+      // Deny access if the user is trying to access another user's data
+      throw new UnauthorizedException(
+        "Access denied. You are not authorized to view this user's details.",
+      );
+    }
   }
 
   @UseGuards(AuthGuard('jwt'), AdminGuard) // Protect this route with AdminGuard
