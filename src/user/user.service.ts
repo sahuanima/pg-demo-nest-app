@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './user.dto';
-// import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { LoginUserDto } from './user-login.dto';
 
 @Injectable()
 export class UserService {
@@ -15,6 +15,13 @@ export class UserService {
 
   async userRegistration(createUserDto: CreateUserDto): Promise<any> {
     try {
+      const existingUser = await this.userRepository.findOne({
+        where: { email: createUserDto.email },
+      });
+      if (existingUser) {
+        throw new UnauthorizedException('User already exists');
+      }
+
       const saltRounds = 10;
       const salt = await bcrypt.genSalt(saltRounds);
       const hashedPass = await bcrypt.hash(createUserDto.password, salt);
@@ -23,8 +30,7 @@ export class UserService {
         ...createUserDto,
         password: hashedPass,
       });
-      console.log(createUserDto);
-      console.log(newUser);
+
       await this.userRepository.save(newUser);
       const message =
         newUser.role === 'ADMIN'
@@ -37,12 +43,15 @@ export class UserService {
     }
   }
 
-  async validateUser(email: string, password: string): Promise<User> {
+  async validateUser(loginUserDto: LoginUserDto): Promise<User> {
     try {
       const user = await this.userRepository.findOne({
-        where: { email },
+        where: { email: loginUserDto.email },
       });
-      if (!user || !(await bcrypt.compare(password, user.password))) {
+      if (
+        !user ||
+        !(await bcrypt.compare(loginUserDto.password, user.password))
+      ) {
         throw new Error('invalid credentials');
       }
 
@@ -53,12 +62,22 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User> {
-    try {
-      return await this.userRepository.findOne({
-        where: { email },
-      });
-    } catch {
-      throw new UnauthorizedException('user not found');
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.userRepository.find();
+  }
+
+  async getUserById(id: number): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
   }
 }
